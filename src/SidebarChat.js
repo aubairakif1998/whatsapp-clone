@@ -1,6 +1,6 @@
 import React from "react";
 import "./SidebarChat.css";
-import { Avatar, IconButton } from "@mui/material";
+import { Avatar } from "@mui/material";
 
 function SidebarChat() {
   return (
