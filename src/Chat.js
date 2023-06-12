@@ -8,11 +8,13 @@ import MicIcon from "@mui/icons-material/Mic";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import DoneIcon from "@mui/icons-material/Done";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
+import { useStateValue } from "./StateProvider";
 
 function Chat(props) {
   const [messageInput, setMessageInput] = useState("");
   const chatContainerRef = useRef(null);
   const [showScrollDownButton, setShowScrollDownButton] = useState(false);
+  const [{ user }, dispatch] = useStateValue();
 
   const sendMessage = (e) => {
     e.preventDefault();
