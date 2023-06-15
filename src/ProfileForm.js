@@ -8,10 +8,8 @@ import "react-phone-number-input/style.css";
 import { firebaseApp } from "./firebase";
 
 const ProfileForm = (props) => {
-  const [{ user, chattingWithUser, conversationChannelId }, dispatch] =
-    useStateValue();
+  const [{ user }, dispatch] = useStateValue();
   const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [photoURL, setPhotoURL] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +30,7 @@ const ProfileForm = (props) => {
         phoneNumber: phoneNumber,
         photoURL: downloadURL,
         firstName: firstName,
-        lastName: lastName,
+        lastName: "",
         profileSetupComplete: true,
       });
 
@@ -41,7 +39,7 @@ const ProfileForm = (props) => {
         phoneNumber: phoneNumber,
         photoURL: photoURL,
         firstName: firstName,
-        lastName: lastName,
+        lastName: "",
         profileSetupComplete: true,
       });
 

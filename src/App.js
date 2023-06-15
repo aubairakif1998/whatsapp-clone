@@ -7,16 +7,9 @@ import axios from "./axios";
 import LoginPage from "./LoginPage";
 import User from "./models/User";
 
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Link,
-  Navigate,
-} from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { auth } from "./firebase";
 import { useStateValue } from "./StateProvider";
-import { Alert } from "@mui/material";
 import ProfileForm from "./ProfileForm";
 
 function App() {
@@ -72,7 +65,7 @@ function App() {
         channel.unsubscribe();
       };
     }
-  }, [messages]);
+  }, [messages, conversationChannelId]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((authUser) => {
@@ -133,7 +126,7 @@ function App() {
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [dispatch]);
 
   if (loading) {
     return (

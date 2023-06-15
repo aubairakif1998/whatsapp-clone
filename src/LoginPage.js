@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import "./LoginPage.css";
 import { useNavigate } from "react-router-dom";
 import { auth } from "./firebase";
-import axios from "./axios";
 export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
