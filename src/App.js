@@ -24,8 +24,8 @@ function App() {
     useStateValue();
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState([]);
-  const connection_url =
-    "mongodb+srv://admin:1234567890@cluster0.fo6njqa.mongodb.net/whatsappdb?retryWrites=true&w=majority";
+  // const connection_url =
+  //   "mongodb+srv://admin:1234567890@cluster0.fo6njqa.mongodb.net/whatsappdb?retryWrites=true&w=majority";
   // mongoose
   //   .connect(connection_url, {
   //     useNewUrlParser: true,
