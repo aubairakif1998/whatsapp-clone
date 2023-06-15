@@ -5,6 +5,10 @@ class User {
     this.createdDate = new Date(data.createdDate);
     this.name = data.name;
     this.photoURL = data.photoURL;
+    this.firstName = data.firstName;
+    this.lastName = data.lastName;
+    this.phoneNumber = data.phoneNumber;
+    this.profileSetupComplete = data.profileSetupComplete;
     this.providedData = data.providedData.map((provider) => ({
       providerId: provider.providerId,
       uid: provider.uid,

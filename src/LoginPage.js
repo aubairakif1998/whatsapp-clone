@@ -67,7 +67,7 @@ export default function LoginPage() {
             />
           </svg>
           <input
-            placeholder="name@mail.com"
+            placeholder="       name@mail.com"
             title="Inpit title"
             name="input-name"
             type="text"

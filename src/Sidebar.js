@@ -13,8 +13,20 @@ import User from "./models/User";
 
 function Sidebar() {
   const [users, setUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [{ user }, dispatch] = useStateValue();
-
+  const [currentUserChats, setcurrentUserChats] = useState([]);
+  useEffect(() => {
+    axios
+      .get("/users/:id/chats")
+      .then((response) => {
+        console.log(response.data);
+        setUsers(response.data);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  }, []);
   useEffect(() => {
     axios
       .get("/users/sync")
@@ -26,10 +38,19 @@ function Sidebar() {
         console.log(error);
       });
   }, []);
+  const handleSearch = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const filteredUsers = users.filter((user) =>
+    user.firstName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="sidebar">
       <div className="sidebar__header">
         <Avatar src={user.photoURL} />
+        <h3>{user.firstName}</h3>
         <div className="sidebar__headerRight">
           <IconButton>
             <DonutLargeIcon />
@@ -42,14 +63,24 @@ function Sidebar() {
           </IconButton>
           <button
             className="login__registerButton"
-            onClick={async () => {
-              await auth.signOut().then(() => {
-                dispatch({
-                  type: "SET_USER",
-                  user: null,
-                });
+            onClick={() => {
+              auth.signOut().then(() => {
+                dispatch(
+                  {
+                    type: "SET_USER",
+                    user: null,
+                  },
+                  {
+                    type: "SET_CHATTINGWITH_USER",
+                    chattingWithUser: null,
+                  },
+                  {
+                    type: "SET_CHANNEL",
+                    conversationChannelId: null,
+                  }
+                );
+                console.log(user, "logging out - reducer-active user");
               });
-              console.log(user, "logging out - active user");
             }}
           >
             Sign out
@@ -59,13 +90,30 @@ function Sidebar() {
       <div className="sidebar__search">
         <div className="sidebar__searchContainer">
           <SearchOutlined />
-          <input placeholder="Search or start new chat" type="text" />
+          <input
+            placeholder="Search or start new chat"
+            type="text"
+            value={searchTerm}
+            onChange={handleSearch}
+          />
         </div>
       </div>
 
-      {users && (
-        <div className="sidebar__chats">
-          {users.map((obj, index) => {
+      <div className="sidebar__chats">
+        {user.conversations === [] ? (
+          <></>
+        ) : (
+          // users.map((obj, index) => {
+          //   const otherUser = new User(obj);
+          //   return user.uid === otherUser.uid ? (
+          //     <div key={index}></div>
+          //   ) : (
+          //     <div key={index}>
+          //       <SidebarChat userObj={otherUser} />
+          //     </div>
+          //   );
+          // })
+          filteredUsers.map((obj, index) => {
             const otherUser = new User(obj);
             return user.uid === otherUser.uid ? (
               <div key={index}></div>
@@ -74,9 +122,9 @@ function Sidebar() {
                 <SidebarChat userObj={otherUser} />
               </div>
             );
-          })}
-        </div>
-      )}
+          })
+        )}
+      </div>
     </div>
   );
 }

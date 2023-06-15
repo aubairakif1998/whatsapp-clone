@@ -6,6 +6,7 @@ import Pusher from "pusher-js";
 import axios from "./axios";
 import LoginPage from "./LoginPage";
 import User from "./models/User";
+
 import {
   BrowserRouter as Router,
   Routes,
@@ -16,38 +17,62 @@ import {
 import { auth } from "./firebase";
 import { useStateValue } from "./StateProvider";
 import { Alert } from "@mui/material";
+import ProfileForm from "./ProfileForm";
 
 function App() {
-  // User state
-  const [{ user }, dispatch] = useStateValue();
+  const [{ user, chattingWithUser, conversationChannelId }, dispatch] =
+    useStateValue();
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState([]);
-
-  // useEffect(() => {
-  //   axios
-  //     .get("/messages/sync")
-  //     .then((response) => {
-  //       setMessages(response.data);
-  //     })
-  //     .catch((error) => {
-  //       console.log(error);
-  //     });
-  // }, []);
-
-  // useEffect(() => {
-  //   var pusher = new Pusher("9be80fad10efd4fded17", {
-  //     cluster: "ap2",
+  const connection_url =
+    "mongodb+srv://admin:1234567890@cluster0.fo6njqa.mongodb.net/whatsappdb?retryWrites=true&w=majority";
+  // mongoose
+  //   .connect(connection_url, {
+  //     useNewUrlParser: true,
+  //     useUnifiedTopology: true,
+  //   })
+  //   .then(() => {})
+  //   .catch((err) => {});
+  // const db = mongoose.connection;
+  // db.once("open", () => {
+  //   console.log("DB connected - Mongo.. - FrontEnd Side");
+  //   const changeStreamUsers = db
+  //     .collection("users")
+  //     .watch([{ $match: { "documentKey._id": user.uid } }]);
+  //   changeStreamUsers.on("change", (change) => {
+  //     console.log("change", change);
   //   });
-  //   var channel = pusher.subscribe("messages");
-  //   channel.bind("insert", function (data) {
-  //     setMessages((prevMessages) => [...prevMessages, data]);
-  //     console.log(messages);
-  //   });
-  //   return () => {
-  //     channel.unbind_all();
-  //     channel.unsubscribe();
-  //   };
-  // }, [messages]);
+  // });
+
+  useEffect(() => {
+    if (conversationChannelId) {
+      axios
+        .get(`/conversations/${conversationChannelId}/messages`)
+        .then((response) => {
+          setMessages(response.data);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    }
+  }, [conversationChannelId]);
+
+  useEffect(() => {
+    if (conversationChannelId) {
+      var pusher = new Pusher("9be80fad10efd4fded17", {
+        cluster: "ap2",
+      });
+      var channel = pusher.subscribe(conversationChannelId);
+      channel.bind("insert", function (data) {
+        setMessages((prevMessages) => [...prevMessages, data]);
+        console.log(messages);
+      });
+      return () => {
+        channel.unbind_all();
+        channel.unsubscribe();
+      };
+    }
+  }, [messages]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((authUser) => {
@@ -55,58 +80,53 @@ function App() {
         "Change Occured in Firebase Auth >>> FirebaseUser = ",
         authUser
       );
-      dispatch({
-        type: "SET_USER",
-        user: null,
-      });
+
       if (authUser === null) {
+        dispatch({
+          type: "SET_USER",
+          user: null,
+        });
+        dispatch({
+          type: "SET_CHATTINGWITH_USER",
+          chattingWithUser: null,
+        });
         setLoading(false);
       } else {
-        axios
-          .post(`/users/uid/${authUser.uid}`)
-          .then((response) => {
-            const user = new User(response.data);
-            dispatch({
-              type: "SET_USER",
-              user: user,
+        console.log("Started mongo work");
+        const userObj = {
+          _id: authUser._delegate.uid,
+          uid: authUser._delegate.uid,
+          email: authUser.email,
+          createdDate: new Date().toUTCString(),
+          name: authUser.email.substring(0, 5),
+          photoURL: authUser.photoURL ?? "",
+          providedData: authUser.providerData,
+          conversations: [],
+          firstName: "",
+          lastName: "",
+          phoneNumber: "",
+          profileSetupComplete: false,
+          messages: [],
+        };
+        try {
+          axios
+            .post(`/users/uid/${authUser.uid}`, userObj)
+            .then((response) => {
+              const user = new User(response.data);
+              dispatch({
+                type: "SET_USER",
+                user: user,
+              });
+              console.log(user, "App - active user");
+              setLoading(false);
+            })
+            .catch((error) => {
+              console.error("Error creating/getting user in MongoDB:", error);
+              setLoading(false); // Update loading state even in case of an error
             });
-            console.log(user, "App - active user");
-            setLoading(false);
-          })
-          .catch((error) => {
-            console.log(error.response.status);
-            if (error.response.status === 404) {
-              const userObj = {
-                _id: authUser._delegate.uid,
-                uid: authUser._delegate.uid,
-                email: authUser.email,
-                createdDate: new Date().toUTCString(),
-                name: authUser.email.substring(0, 5),
-                photoURL: authUser.photoURL ?? "",
-                providedData: authUser.providerData,
-                conversations: [],
-                messages: [],
-              };
-              axios
-                .post("/users/new", userObj)
-                .then((response) => {
-                  dispatch({
-                    type: "SET_USER",
-                    user: userObj,
-                  });
-                  console.log("User created in MongoDB successfully:");
-                  console.log(user, "App - active user");
-                  setLoading(false);
-                })
-                .catch((error) => {
-                  console.error("Error creating user in MongoDB:", error);
-                });
-            } else {
-              alert(
-                "Reload the page please. There is some network problem happened."
-              );
-            }
-          });
+        } catch (error) {
+          return alert(error);
+        }
       }
     });
 
@@ -135,21 +155,28 @@ function App() {
             path="/"
             element={
               user ? (
-                <>
-                  <div className="appheader"></div>
-                  <div className="app">
-                    <div className="app__body">
-                      <Sidebar />
-                      <Chat messages={messages} />
+                user.profileSetupComplete ? (
+                  <>
+                    <div className="appheader"></div>
+                    <div className="app">
+                      <div className="app__body">
+                        <Sidebar />
+                        {chattingWithUser && conversationChannelId ? (
+                          <Chat messages={messages} />
+                        ) : (
+                          <></>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </>
+                  </>
+                ) : (
+                  <ProfileForm />
+                )
               ) : (
                 <LoginPage />
               )
             }
           />
-          {/* <Route path="/login" element={<LoginPage />} /> */}
         </Routes>
       </div>
     </Router>

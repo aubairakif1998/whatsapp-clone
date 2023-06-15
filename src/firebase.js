@@ -1,6 +1,8 @@
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
+import "firebase/compat/storage";
+
 const firebaseConfig = {
   apiKey: "AIzaSyDgjowl4xQYVMWDZwfD66sell6ImR7q1A0",
   authDomain: "webchatapp-d92eb.firebaseapp.com",
@@ -15,5 +17,6 @@ const firebaseApp = firebase.initializeApp(firebaseConfig);
 
 const db = firebaseApp.firestore();
 const auth = firebase.auth();
+const storage = firebase.storage();
 
-export { db, auth };
+export { db, auth, storage, firebaseApp };

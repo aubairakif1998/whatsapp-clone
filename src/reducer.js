@@ -1,6 +1,7 @@
 export const initialState = {
   user: null,
   conversationChannelId: null,
+  chattingWithUser: null,
 };
 
 const reducer = (state, action) => {
@@ -13,6 +14,11 @@ const reducer = (state, action) => {
       return {
         ...state,
         conversationChannelId: action.conversationChannelId,
+      };
+    case "SET_CHATTINGWITH_USER":
+      return {
+        ...state,
+        chattingWithUser: action.chattingWithUser,
       };
     default:
       return state;

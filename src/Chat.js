@@ -14,32 +14,49 @@ function Chat(props) {
   const [messageInput, setMessageInput] = useState("");
   const chatContainerRef = useRef(null);
   const [showScrollDownButton, setShowScrollDownButton] = useState(false);
-  const [{ user }, dispatch] = useStateValue();
+  const [{ user, conversationChannelId, chattingWithUser }, dispatch] =
+    useStateValue();
 
   const sendMessage = (e) => {
     e.preventDefault();
     if (messageInput !== "") {
       const newMessage = {
-        message: messageInput,
-        name: "Aubair.Akif",
-        timestamp: new Date().toUTCString(),
-        received: false,
-        sent: true,
+        conversationId: conversationChannelId,
+        content: messageInput,
+        senderId: user.uid,
+        receiverId: chattingWithUser.uid,
+        sentAt: new Date().toUTCString(),
         seen: false,
-        read: false,
+        received: false,
+        updatedAt: new Date().toUTCString(),
       };
-
+      console.log(conversationChannelId);
       axios
-        .post("/messages/new", newMessage)
+        .post(
+          `/conversations/${conversationChannelId}/messages/new`,
+          newMessage
+        )
         .then((response) => {
-          console.log("Message sent successfully:", response.data);
-          scrollToBottom();
+          console.log("Message sent successfully in mongo db", response.data);
         })
         .catch((error) => {
+          alert("Error sending message:", error);
           console.error("Error sending message:", error);
         });
-
-      setMessageInput("");
+      axios
+        .post(`/chatstream/${conversationChannelId}/message/new`, newMessage)
+        .then((response) => {
+          console.log(
+            "Message sent successfully in chat stream:",
+            response.data
+          );
+          scrollToBottom();
+          setMessageInput("");
+        })
+        .catch((error) => {
+          alert("Error sending message in chat stream:", error);
+          console.error("Error sending message in chat stream:", error);
+        });
     }
   };
 
@@ -65,8 +82,8 @@ function Chat(props) {
       <div className="chat__header">
         <Avatar />
         <div className="chat__headerInfo">
-          <h3>Room name</h3>
-          <p>last seen at...</p>
+          <h3>{chattingWithUser.name}</h3>
+          <p>Online</p>
         </div>
         <div className="chat__headerRight">
           <IconButton>
@@ -86,13 +103,13 @@ function Chat(props) {
         onScroll={handleScroll}
       >
         {props.messages.map((message, index) =>
-          message.name === "Aubair.Akif" ? (
+          message.senderId === user.uid ? (
             <div key={index} className="chat__messageContainer">
               <p className="chat__message chat__receiver">
                 <span className="chat__name">{message.name}</span>
-                {message.message}
-                <span className="chat__timestamp">{message.timestamp}</span>
-                {message.sent ? (
+                {message.content}
+                <span className="chat__timestamp">{message.sentAt}</span>
+                {/* {message.sent ? (
                   message.seen ? (
                     <DoneAllIcon
                       className="chat__tick"
@@ -114,15 +131,15 @@ function Chat(props) {
                     className="chat__tick"
                     style={{ color: "grey", fontSize: "14px" }}
                   />
-                )}
+                )} */}
               </p>
             </div>
           ) : (
             <div key={index} className="chat__messageContainer">
               <p className="chat__message">
                 <span className="chat__name">{message.name}</span>
-                {message.message}
-                <span className="chat__timestamp">{message.timestamp}</span>
+                {message.content}
+                <span className="chat__timestamp">{message.sentAt}</span>
               </p>
             </div>
           )
