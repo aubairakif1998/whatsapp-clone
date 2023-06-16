@@ -2,6 +2,7 @@ export const initialState = {
   user: null,
   conversationChannelId: null,
   chattingWithUser: null,
+  listOfConversations: null,
 };
 
 const reducer = (state, action) => {
@@ -19,6 +20,11 @@ const reducer = (state, action) => {
       return {
         ...state,
         chattingWithUser: action.chattingWithUser,
+      };
+    case "SET_CONVERSATION_CHANNEL_LIST_USER":
+      return {
+        ...state,
+        listOfConversations: action.listOfConversations,
       };
     default:
       return state;

@@ -28,19 +28,43 @@ function Sidebar() {
         console.log(error);
       });
   }, []);
+
+  useEffect(() => {
+    const list = [];
+
+    if (user.conversations) {
+      user.conversations.forEach((conversation) => {
+        const chatWithUser = users.find(
+          (user) => user.uid === conversation.chatWithUserId
+        );
+
+        if (chatWithUser) {
+          const chattile = {
+            chatWithUser: chatWithUser,
+            lastMessage: conversation.lastMessage,
+          };
+          list.push(chattile);
+        }
+      });
+    }
+
+    setcurrentUserChats(list);
+  }, [user, users]);
+
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
   };
 
-  const filteredUsers = users.filter((user) =>
-    user.firstName.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      !currentUserChats.some((chat) => chat.chatWithUser.uid === user.uid)
   );
 
   return (
     <div className="sidebar">
       <div className="sidebar__header">
         <Avatar src={user.photoURL} style={{ width: "55px", height: "55px" }} />
-
         <div className="sidebar__headerRight">
           <IconButton>
             <DonutLargeIcon />
@@ -59,25 +83,23 @@ function Sidebar() {
                   axios
                     .post(`/users/uid/${user.uid}/signout`, user)
                     .then((response) => {
-                      dispatch(
-                        {
-                          type: "SET_USER",
-                          user: null,
-                        },
-                        {
-                          type: "SET_CHATTINGWITH_USER",
-                          chattingWithUser: null,
-                        },
-                        {
-                          type: "SET_CHANNEL",
-                          conversationChannelId: null,
-                        }
-                      );
+                      dispatch({
+                        type: "SET_USER",
+                        user: null,
+                      });
+                      dispatch({
+                        type: "SET_CHATTINGWITH_USER",
+                        chattingWithUser: null,
+                      });
+                      dispatch({
+                        type: "SET_CHANNEL",
+                        conversationChannelId: null,
+                      });
                       console.log(user, "logging out - reducer-active user");
                     })
                     .catch((error) => {
                       console.error(
-                        "Error while updaing user signout status in MongoDB:",
+                        "Error while updating user signout status in MongoDB:",
                         error
                       );
                     });
@@ -102,18 +124,23 @@ function Sidebar() {
           />
         </div>
       </div>
-
       <div className="sidebar__chats">
-        {filteredUsers.map((obj, index) => {
-          const otherUser = new User(obj);
-          return user.uid === otherUser.uid ? (
-            <div key={index}></div>
-          ) : (
-            <div key={index}>
-              <SidebarChat userObj={otherUser} />
-            </div>
-          );
-        })}
+        {searchTerm === ""
+          ? // Show chats of current users if search term is empty
+            currentUserChats.map((obj, index) => (
+              <div key={index}>
+                <SidebarChat
+                  userObj={obj.chatWithUser}
+                  lastMessage={obj.lastMessage}
+                />
+              </div>
+            ))
+          : // Show filtered users if search term is not empty
+            filteredUsers.map((user) => (
+              <div key={user.uid}>
+                <SidebarChat userObj={user} />
+              </div>
+            ))}
       </div>
     </div>
   );

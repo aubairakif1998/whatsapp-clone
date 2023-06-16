@@ -10,10 +10,12 @@ import DoneIcon from "@mui/icons-material/Done";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import { useStateValue } from "./StateProvider";
 import sound from "./assets/sent.wav";
+import moment from "moment";
 function Chat(props) {
   const [messageInput, setMessageInput] = useState("");
   const chatContainerRef = useRef(null);
   const [showScrollDownButton, setShowScrollDownButton] = useState(false);
+
   const [{ user, conversationChannelId, chattingWithUser }, dispatch] =
     useStateValue();
   function play() {
@@ -60,6 +62,23 @@ function Chat(props) {
           alert("Error sending message in chat stream:", error);
           console.error("Error sending message in chat stream:", error);
         });
+
+      axios
+        .put(
+          `/users/${user.uid}/conversations/${conversationChannelId}/update/lastMessage`,
+          newMessage
+        )
+        .then((response) => {
+          console.log(
+            "Message saved successfull in the last message field in user doc"
+          );
+        })
+        .catch((error) => {
+          console.error(
+            "Error Message not saved successfull in the last message field in user doc:",
+            error
+          );
+        });
     }
   };
 
@@ -80,20 +99,22 @@ function Chat(props) {
     scrollToBottom();
   }, [props.messages]);
   const formatLastSeen = (timestamp) => {
-    const lastSeen = new Date(timestamp);
-    const currentTime = new Date();
-    const timeDifference = currentTime.getTime() - lastSeen.getTime();
-    const minutes = Math.floor(timeDifference / (1000 * 60));
-    if (minutes < 1) {
+    const lastSeen = moment(timestamp);
+    const currentTime = moment();
+    const minutesDiff = currentTime.diff(lastSeen, "minutes");
+
+    if (minutesDiff < 1) {
       return "Online";
-    } else if (minutes < 60) {
-      return `Last seen: ${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-    } else if (minutes < 1440) {
-      const hours = Math.floor(minutes / 60);
-      return `Last seen: ${hours} hour${hours > 1 ? "s" : ""} ago`;
+    } else if (minutesDiff < 60) {
+      return `Last seen: ${minutesDiff} minute${
+        minutesDiff !== 1 ? "s" : ""
+      } ago`;
+    } else if (minutesDiff < 1440) {
+      const hoursDiff = Math.floor(minutesDiff / 60);
+      return `Last seen: ${hoursDiff} hour${hoursDiff !== 1 ? "s" : ""} ago`;
     } else {
-      const days = Math.floor(minutes / 1440);
-      return `Last seen: ${days} day${days > 1 ? "s" : ""} ago`;
+      const daysDiff = Math.floor(minutesDiff / 1440);
+      return `Last seen: ${daysDiff} day${daysDiff !== 1 ? "s" : ""} ago`;
     }
   };
   return (
@@ -140,7 +161,9 @@ function Chat(props) {
               <p className="chat__message chat__receiver">
                 <span className="chat__name">{message.name}</span>
                 {message.content}
-                <span className="chat__timestamp">{message.sentAt}</span>
+                <span className="chat__timestamp">
+                  {moment(message.sentAt).format("MMM DD, YYYY hh:mm A")}
+                </span>
                 {/* {message.sent ? (
                   message.seen ? (
                     <DoneAllIcon
@@ -171,7 +194,10 @@ function Chat(props) {
               <p className="chat__message">
                 <span className="chat__name">{message.name}</span>
                 {message.content}
-                <span className="chat__timestamp">{message.sentAt}</span>
+                <span className="chat__timestamp">
+                  {" "}
+                  {moment(message.sentAt).format("MMM DD, YYYY hh:mm A")}
+                </span>
               </p>
             </div>
           )

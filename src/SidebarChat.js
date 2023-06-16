@@ -3,6 +3,7 @@ import "./SidebarChat.css";
 import { Avatar } from "@mui/material";
 import { useStateValue } from "./StateProvider";
 import axios from "./axios";
+import moment from "moment";
 
 function SidebarChat(props) {
   const [{ user, conversationChannelId, chattingWithUser }, dispatch] =
@@ -49,13 +50,22 @@ function SidebarChat(props) {
           });
         }
 
-        console.error("Error creating conversation channel in MongoDB:", error);
+        console.log("Error creating conversation channel in MongoDB:", error);
       });
     axios
       .put(`/users/${user.uid}/conversations`, {
         conversationId: conversationId,
         receiverId: props.userObj.uid,
         senderId: user.uid,
+        lastMessage: {
+          content: "",
+          senderId: user.uid,
+          receiverId: props.userObj.uid,
+          sentAt: new Date().toUTCString(),
+          seen: false,
+          received: false,
+          updatedAt: new Date().toUTCString(),
+        },
       })
       .then((response) => {
         console.log(response.data, "update user conversations:");
@@ -69,11 +79,33 @@ function SidebarChat(props) {
       <Avatar
         src={props.userObj.photoURL}
         style={{ width: "55px", height: "55px" }}
+        className="sidebarChat__avatar"
       />
 
-      <div>
-        <div className="sidebarChat__info">{props.userObj.firstName}</div>
-        <p className="sidebarChat__info_p">Im comming</p>
+      <div className="sidebarChat__details">
+        <div className="sidebarChat__info">
+          <span className="sidebarChat__name">{props.userObj.firstName}</span>
+          {props.lastMessage ? (
+            <span className="sidebarChat__timestamp">
+              {moment(props.lastMessage.sentAt.toUTCString()).format(
+                "MMM DD, YYYY hh:mm A"
+              )}
+            </span>
+          ) : (
+            <button
+              className="sidebarChat__startChatButton"
+              onClick={initiateChat}
+            >
+              Start Chat
+            </button>
+          )}
+        </div>
+        {props.lastMessage && (
+          <p className="sidebarChat__message">
+            {props.lastMessage.senderId === user.uid ? "You: " : ""}
+            {props.lastMessage.content}
+          </p>
+        )}
       </div>
     </div>
   );

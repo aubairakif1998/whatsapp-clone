@@ -19,7 +19,20 @@ class User {
       phoneNumber: provider.phoneNumber,
       photoURL: provider.photoURL,
     }));
-    this.conversations = data.conversations;
+    this.conversations = data.conversations.map((conversation) => ({
+      conversationId: conversation.conversationId,
+      chatWithUserId: conversation.chatWithUserId,
+      lastMessage: {
+        conversationId: conversation.lastMessage.conversationId,
+        content: conversation.lastMessage.content,
+        senderId: conversation.lastMessage.senderId,
+        receiverId: conversation.lastMessage.receiverId,
+        sentAt: new Date(conversation.lastMessage.sentAt),
+        seen: conversation.lastMessage.seen,
+        received: conversation.lastMessage.received,
+        updatedAt: new Date(conversation.lastMessage.updatedAt),
+      },
+    }));
     this.messages = data.messages;
   }
 

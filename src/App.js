@@ -70,7 +70,6 @@ function App() {
     const subscribeFirebaseAuth = auth.onAuthStateChanged((authUser) => {
       console.log("Firebase Auth >>> FirebaseUser = ", authUser);
       if (authUser !== null) {
-        console.log("Logged in userId :", authUser.uid);
         try {
           axios
             .post(`/users/uid/${authUser.uid}`, authUser)
@@ -80,7 +79,7 @@ function App() {
                 type: "SET_USER",
                 user: user,
               });
-              console.log("App - active user", user);
+              console.log("App - active user", user.conversations);
               setLoading(false);
             })
             .catch((error) => {
