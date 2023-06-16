@@ -16,17 +16,7 @@ function Sidebar() {
   const [searchTerm, setSearchTerm] = useState("");
   const [{ user }, dispatch] = useStateValue();
   const [currentUserChats, setcurrentUserChats] = useState([]);
-  // useEffect(() => {
-  //   axios
-  //     .get("/users/:id/chats")
-  //     .then((response) => {
-  //       console.log(response.data);
-  //       setUsers(response.data);
-  //     })
-  //     .catch((error) => {
-  //       console.log(error);
-  //     });
-  // }, []);
+
   useEffect(() => {
     axios
       .get("/users/sync")
@@ -49,8 +39,8 @@ function Sidebar() {
   return (
     <div className="sidebar">
       <div className="sidebar__header">
-        <Avatar src={user.photoURL} />
-        <h3>{user.firstName}</h3>
+        <Avatar src={user.photoURL} style={{ width: "55px", height: "55px" }} />
+
         <div className="sidebar__headerRight">
           <IconButton>
             <DonutLargeIcon />
@@ -65,21 +55,35 @@ function Sidebar() {
             className="login__registerButton"
             onClick={() => {
               auth.signOut().then(() => {
-                dispatch(
-                  {
-                    type: "SET_USER",
-                    user: null,
-                  },
-                  {
-                    type: "SET_CHATTINGWITH_USER",
-                    chattingWithUser: null,
-                  },
-                  {
-                    type: "SET_CHANNEL",
-                    conversationChannelId: null,
-                  }
-                );
-                console.log(user, "logging out - reducer-active user");
+                try {
+                  axios
+                    .post(`/users/uid/${user.uid}/signout`, user)
+                    .then((response) => {
+                      dispatch(
+                        {
+                          type: "SET_USER",
+                          user: null,
+                        },
+                        {
+                          type: "SET_CHATTINGWITH_USER",
+                          chattingWithUser: null,
+                        },
+                        {
+                          type: "SET_CHANNEL",
+                          conversationChannelId: null,
+                        }
+                      );
+                      console.log(user, "logging out - reducer-active user");
+                    })
+                    .catch((error) => {
+                      console.error(
+                        "Error while updaing user signout status in MongoDB:",
+                        error
+                      );
+                    });
+                } catch (error) {
+                  return alert(error);
+                }
               });
             }}
           >

@@ -7,20 +7,17 @@ import axios from "./axios";
 function SidebarChat(props) {
   const [{ user, conversationChannelId, chattingWithUser }, dispatch] =
     useStateValue();
+  const generateConversationId = (currentUserId, otherUserId) => {
+    const sortedUserIds = [currentUserId, otherUserId].sort(); // Sort userIds alphabetically
+    return sortedUserIds.join("_"); // Concatenate userIds with an underscore
+  };
   const initiateChat = () => {
-    let generateConversationId = (currentUserId, otherUserId) => {
-      const sortedUserIds = [currentUserId, otherUserId].sort(); // Sort userIds alphabetically
-      return sortedUserIds.join("_"); // Concatenate userIds with an underscore
-    };
-    let currentUserId = user.uid;
-    let otherUserId = props.userObj.uid;
     let conversationId = generateConversationId(user.uid, props.userObj.uid);
     let conversationObj = {
       participants: [
         { participantId: user.uid },
         { participantId: props.userObj.uid },
       ],
-      _id: conversationId,
       conversationId: conversationId,
       channelName: "",
       messages: [],
@@ -55,10 +52,10 @@ function SidebarChat(props) {
         console.error("Error creating conversation channel in MongoDB:", error);
       });
     axios
-      .put(`/users/${currentUserId}/conversations`, {
+      .put(`/users/${user.uid}/conversations`, {
         conversationId: conversationId,
-        receiverId: otherUserId,
-        senderId: currentUserId,
+        receiverId: props.userObj.uid,
+        senderId: user.uid,
       })
       .then((response) => {
         console.log(response.data, "update user conversations:");
@@ -69,10 +66,14 @@ function SidebarChat(props) {
   };
   return (
     <div className="sidebarChat" onClick={initiateChat}>
-      <Avatar />
-      <div className="sidebarChat__info">
-        <h2>{props.userObj.email}</h2>
-        <p>{props.userObj.firstName}</p>
+      <Avatar
+        src={props.userObj.photoURL}
+        style={{ width: "55px", height: "55px" }}
+      />
+
+      <div>
+        <div className="sidebarChat__info">{props.userObj.firstName}</div>
+        <p className="sidebarChat__info_p">Im comming</p>
       </div>
     </div>
   );

@@ -30,7 +30,6 @@ function App() {
         });
     }
   }, [conversationChannelId]);
-
   useEffect(() => {
     if (conversationChannelId) {
       var pusher = new Pusher("9be80fad10efd4fded17", {
@@ -47,40 +46,41 @@ function App() {
       };
     }
   }, [messages, conversationChannelId]);
-
+  useEffect(() => {
+    if (user) {
+      var pusher = new Pusher("9be80fad10efd4fded17", {
+        cluster: "ap2",
+      });
+      var channel = pusher.subscribe(user.uid);
+      channel.bind("insert", function (data) {
+        const updatedCurrentUser = new User(data);
+        dispatch({
+          type: "SET_USER",
+          user: updatedCurrentUser,
+        });
+        console.log("current user updated:", updatedCurrentUser);
+      });
+      return () => {
+        channel.unbind_all();
+        channel.unsubscribe();
+      };
+    }
+  }, [user]);
   useEffect(() => {
     const subscribeFirebaseAuth = auth.onAuthStateChanged((authUser) => {
-      console.log(
-        "Change Occured in Firebase Auth >>> FirebaseUser = ",
-        authUser
-      );
+      console.log("Firebase Auth >>> FirebaseUser = ", authUser);
       if (authUser !== null) {
-        console.log("The logged in userId :", authUser.uid);
-        const userObj = {
-          _id: authUser._delegate.uid,
-          uid: authUser.uid,
-          email: authUser.email,
-          createdDate: new Date().toUTCString(),
-          name: authUser.email.substring(0, 5),
-          photoURL: authUser.photoURL ?? "",
-          providedData: authUser.providerData,
-          conversations: [],
-          firstName: "",
-          lastName: "",
-          phoneNumber: "",
-          profileSetupComplete: false,
-          messages: [],
-        };
+        console.log("Logged in userId :", authUser.uid);
         try {
           axios
-            .post(`/users/uid/${authUser.uid}`, userObj)
+            .post(`/users/uid/${authUser.uid}`, authUser)
             .then((response) => {
               const user = new User(response.data);
               dispatch({
                 type: "SET_USER",
                 user: user,
               });
-              console.log(user, "App - active user");
+              console.log("App - active user", user);
               setLoading(false);
             })
             .catch((error) => {

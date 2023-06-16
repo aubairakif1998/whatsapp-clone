@@ -18,29 +18,28 @@ const ProfileForm = (props) => {
     try {
       setIsLoading(true);
       const storageRef = firebaseApp.storage().ref();
-      const fileRef = storageRef.child("images/octofez.png");
+      const fileRef = storageRef.child(`images/octofez_${user.uid}.png`);
       await fileRef.put(photoURL);
       const downloadURL = await fileRef.getDownloadURL();
-      await axios.put(`/users/update/${user.uid}`, {
-        phoneNumber: phoneNumber,
-        photoURL: downloadURL,
-        firstName: firstName,
-        lastName: "",
-        profileSetupComplete: true,
-      });
-      const updatedUser = new User({
-        ...user,
-        phoneNumber: phoneNumber,
-        photoURL: photoURL,
-        firstName: firstName,
-        lastName: "",
-        profileSetupComplete: true,
-      });
-      dispatch({
-        type: "SET_USER",
-        user: updatedUser,
-      });
-      console.log(updatedUser, "updated App - active user");
+      await axios
+        .put(`/users/update/${user.uid}`, {
+          phoneNumber: phoneNumber,
+          photoURL: downloadURL,
+          firstName: firstName,
+          lastName: "",
+          profileSetupComplete: true,
+        })
+        .then(async () => {
+          await axios
+            .post(`/userUpdate/${user.uid}/user/newupdate`, {})
+            .then((response) => {
+              console.log(response.data);
+              setIsLoading(false);
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        });
     } catch (error) {
       console.log("Error updating user in MongoDB:", error);
     } finally {

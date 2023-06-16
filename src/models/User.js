@@ -7,6 +7,8 @@ class User {
     this.photoURL = data.photoURL;
     this.firstName = data.firstName;
     this.lastName = data.lastName;
+    this.isOnline = data.isOnline;
+    this.lastSeen = data.lastSeen;
     this.phoneNumber = data.phoneNumber;
     this.profileSetupComplete = data.profileSetupComplete;
     this.providedData = data.providedData.map((provider) => ({
@@ -51,6 +53,13 @@ class User {
 
   getMessages() {
     return this.messages;
+  }
+  getLastSeen() {
+    return this.lastSeen;
+  }
+
+  getIsOnlineStatus() {
+    return this.isOnline;
   }
 }
 

@@ -79,14 +79,43 @@ function Chat(props) {
   useEffect(() => {
     scrollToBottom();
   }, [props.messages]);
-
+  const formatLastSeen = (timestamp) => {
+    const lastSeen = new Date(timestamp);
+    const currentTime = new Date();
+    const timeDifference = currentTime.getTime() - lastSeen.getTime();
+    const minutes = Math.floor(timeDifference / (1000 * 60));
+    if (minutes < 1) {
+      return "Online";
+    } else if (minutes < 60) {
+      return `Last seen: ${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+    } else if (minutes < 1440) {
+      const hours = Math.floor(minutes / 60);
+      return `Last seen: ${hours} hour${hours > 1 ? "s" : ""} ago`;
+    } else {
+      const days = Math.floor(minutes / 1440);
+      return `Last seen: ${days} day${days > 1 ? "s" : ""} ago`;
+    }
+  };
   return (
     <div className="chat">
       <div className="chat__header">
-        <Avatar />
-        <div className="chat__headerInfo">
-          <h3>{chattingWithUser.name}</h3>
-          <p>Online</p>
+        <Avatar
+          src={chattingWithUser.photoURL}
+          style={{ width: "55px", height: "55px" }}
+        />
+        <div className="chat__headerInfo" style={{ marginLeft: "15px" }}>
+          <h3
+            style={{
+              marginBottom: "5px",
+              fontSize: "18px",
+              fontWeight: "bold",
+            }}
+          >
+            {chattingWithUser.firstName}
+          </h3>
+          <p style={{ fontSize: "14px", color: "#999999" }}>
+            {formatLastSeen(chattingWithUser.lastSeen)}
+          </p>
         </div>
         <div className="chat__headerRight">
           <IconButton>
