@@ -1,0 +1,23 @@
+.server-error-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
+    background-repeat: repeat;
+    background-position: center;
+}
+
+.server-error-page h1 {
+    font-size: 36px;
+    margin-bottom: 16px;
+    color: #333;
+}
+
+.server-error-page p {
+    font-size: 20px;
+    color: #666;
+    max-width: 400px;
+    text-align: center;
+}

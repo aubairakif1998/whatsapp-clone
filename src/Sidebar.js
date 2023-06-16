@@ -16,17 +16,17 @@ function Sidebar() {
   const [searchTerm, setSearchTerm] = useState("");
   const [{ user }, dispatch] = useStateValue();
   const [currentUserChats, setcurrentUserChats] = useState([]);
-  useEffect(() => {
-    axios
-      .get("/users/:id/chats")
-      .then((response) => {
-        console.log(response.data);
-        setUsers(response.data);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
-  }, []);
+  // useEffect(() => {
+  //   axios
+  //     .get("/users/:id/chats")
+  //     .then((response) => {
+  //       console.log(response.data);
+  //       setUsers(response.data);
+  //     })
+  //     .catch((error) => {
+  //       console.log(error);
+  //     });
+  // }, []);
   useEffect(() => {
     axios
       .get("/users/sync")
@@ -100,30 +100,16 @@ function Sidebar() {
       </div>
 
       <div className="sidebar__chats">
-        {user.conversations === [] ? (
-          <></>
-        ) : (
-          // users.map((obj, index) => {
-          //   const otherUser = new User(obj);
-          //   return user.uid === otherUser.uid ? (
-          //     <div key={index}></div>
-          //   ) : (
-          //     <div key={index}>
-          //       <SidebarChat userObj={otherUser} />
-          //     </div>
-          //   );
-          // })
-          filteredUsers.map((obj, index) => {
-            const otherUser = new User(obj);
-            return user.uid === otherUser.uid ? (
-              <div key={index}></div>
-            ) : (
-              <div key={index}>
-                <SidebarChat userObj={otherUser} />
-              </div>
-            );
-          })
-        )}
+        {filteredUsers.map((obj, index) => {
+          const otherUser = new User(obj);
+          return user.uid === otherUser.uid ? (
+            <div key={index}></div>
+          ) : (
+            <div key={index}>
+              <SidebarChat userObj={otherUser} />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

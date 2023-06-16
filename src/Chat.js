@@ -9,14 +9,16 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import DoneIcon from "@mui/icons-material/Done";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import { useStateValue } from "./StateProvider";
-
+import sound from "./assets/sent.wav";
 function Chat(props) {
   const [messageInput, setMessageInput] = useState("");
   const chatContainerRef = useRef(null);
   const [showScrollDownButton, setShowScrollDownButton] = useState(false);
   const [{ user, conversationChannelId, chattingWithUser }, dispatch] =
     useStateValue();
-
+  function play() {
+    new Audio(sound).play();
+  }
   const sendMessage = (e) => {
     e.preventDefault();
     if (messageInput !== "") {
@@ -52,6 +54,7 @@ function Chat(props) {
           );
           scrollToBottom();
           setMessageInput("");
+          play();
         })
         .catch((error) => {
           alert("Error sending message in chat stream:", error);

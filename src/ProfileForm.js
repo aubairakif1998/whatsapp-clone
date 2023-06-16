@@ -6,7 +6,6 @@ import User from "./models/User";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { firebaseApp } from "./firebase";
-
 const ProfileForm = (props) => {
   const [{ user }, dispatch] = useStateValue();
   const [firstName, setFirstName] = useState("");
@@ -16,15 +15,11 @@ const ProfileForm = (props) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       setIsLoading(true);
-
       const storageRef = firebaseApp.storage().ref();
       const fileRef = storageRef.child("images/octofez.png");
       await fileRef.put(photoURL);
-
-      // Get the download URL of the uploaded file
       const downloadURL = await fileRef.getDownloadURL();
       await axios.put(`/users/update/${user.uid}`, {
         phoneNumber: phoneNumber,
@@ -33,7 +28,6 @@ const ProfileForm = (props) => {
         lastName: "",
         profileSetupComplete: true,
       });
-
       const updatedUser = new User({
         ...user,
         phoneNumber: phoneNumber,
@@ -42,12 +36,10 @@ const ProfileForm = (props) => {
         lastName: "",
         profileSetupComplete: true,
       });
-
       dispatch({
         type: "SET_USER",
         user: updatedUser,
       });
-
       console.log(updatedUser, "updated App - active user");
     } catch (error) {
       console.log("Error updating user in MongoDB:", error);

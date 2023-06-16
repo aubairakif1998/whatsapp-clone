@@ -14,7 +14,7 @@ function SidebarChat(props) {
     };
     let currentUserId = user.uid;
     let otherUserId = props.userObj.uid;
-    let conversationId = generateConversationId(currentUserId, otherUserId);
+    let conversationId = generateConversationId(user.uid, props.userObj.uid);
     let conversationObj = {
       participants: [
         { participantId: user.uid },
