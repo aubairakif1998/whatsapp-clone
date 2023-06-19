@@ -78,9 +78,20 @@ function SidebarChat(props) {
     <div className="sidebarChat" onClick={initiateChat}>
       <Avatar
         src={props.userObj.photoURL}
-        style={{ width: "55px", height: "55px" }}
-        className="sidebarChat__avatar"
+        style={{
+          width: "55px",
+          height: "55px",
+          position: "relative",
+        }}
+        className={`sidebarChat__avatar`}
       />
+      <div
+        className={`sidebarChat__avatar ${
+          props.userObj.isOnline
+            ? "sidebarChat__avatar--online"
+            : "sidebarChat__avatar--offline"
+        }`}
+      ></div>
 
       <div className="sidebarChat__details">
         <div className="sidebarChat__info">

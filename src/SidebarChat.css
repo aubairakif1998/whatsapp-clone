@@ -68,3 +68,33 @@
 .sidebarChat__startChatButton:active {
     transform: translateY(1px);
 }
+
+.sidebarChat__avatar--online {
+    position: absolute;
+}
+
+.sidebarChat__avatar--online::after {
+    content: "";
+    position: absolute;
+    bottom: 5px;
+    right: 0px;
+    width: 10px;
+    height: 10px;
+    background-color: rgb(5, 236, 5);
+    border-radius: 50%;
+}
+
+.sidebarChat__avatar--offline {
+    position: absolute;
+}
+
+.sidebarChat__avatar--offline::after {
+    content: "";
+    position: absolute;
+    bottom: 5px;
+    right: 0px;
+    width: 10px;
+    height: 10px;
+    background-color: rgb(255, 234, 3);
+    border-radius: 50%;
+}

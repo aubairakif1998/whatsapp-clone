@@ -28,7 +28,6 @@ function Sidebar() {
         console.log(error);
       });
   }, []);
-
   useEffect(() => {
     const list = [];
 
@@ -45,6 +44,13 @@ function Sidebar() {
           };
           list.push(chattile);
         }
+      });
+
+      // Sort the list by the sentAt date of the last message
+      list.sort((a, b) => {
+        const sentAtA = new Date(a.lastMessage.sentAt);
+        const sentAtB = new Date(b.lastMessage.sentAt);
+        return sentAtB - sentAtA; // Sort in descending order
       });
     }
 
@@ -117,7 +123,7 @@ function Sidebar() {
         <div className="sidebar__searchContainer">
           <SearchOutlined />
           <input
-            placeholder="Search or start new chat"
+            placeholder="Search for contacts & start chatting"
             type="text"
             value={searchTerm}
             onChange={handleSearch}
@@ -136,11 +142,15 @@ function Sidebar() {
               </div>
             ))
           : // Show filtered users if search term is not empty
-            filteredUsers.map((user) => (
-              <div key={user.uid}>
-                <SidebarChat userObj={user} />
-              </div>
-            ))}
+            filteredUsers.map((userObj) =>
+              user.uid === userObj.uid ? (
+                <div key={userObj.uid}></div>
+              ) : (
+                <div key={userObj.uid}>
+                  <SidebarChat userObj={userObj} />
+                </div>
+              )
+            )}
       </div>
     </div>
   );
