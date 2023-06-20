@@ -1,8 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./Chat.css";
 import axios from "./axios";
-import { Avatar, IconButton, Button } from "@mui/material";
-import { AttachFile, MoreVert, SearchOutlined } from "@mui/icons-material";
+import { firebaseApp } from "./firebase";
+import { Avatar, IconButton, Button, DialogTitle, Dialog } from "@mui/material";
+import {
+  AttachFile,
+  MoreVert,
+  SearchOutlined,
+  Camera,
+} from "@mui/icons-material";
 import InsertEmoticonIcon from "@mui/icons-material/InsertEmoticon";
 import MicIcon from "@mui/icons-material/Mic";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -13,74 +19,21 @@ import sound from "./assets/sent.wav";
 import moment from "moment";
 function Chat(props) {
   const [messageInput, setMessageInput] = useState("");
+  const [mediaURL, setMediaURL] = useState("");
   const chatContainerRef = useRef(null);
   const [showScrollDownButton, setShowScrollDownButton] = useState(false);
-
   const [{ user, conversationChannelId, chattingWithUser }, dispatch] =
     useStateValue();
+  const [media, setMedia] = useState({ file: null, type: "" });
+  const [isSending, setIsSending] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   function play() {
     new Audio(sound).play();
   }
-  const sendMessage = (e) => {
-    e.preventDefault();
-    if (messageInput !== "") {
-      const newMessage = {
-        conversationId: conversationChannelId,
-        content: messageInput,
-        senderId: user.uid,
-        receiverId: chattingWithUser.uid,
-        sentAt: new Date().toUTCString(),
-        seen: false,
-        received: false,
-        updatedAt: new Date().toUTCString(),
-      };
-      console.log(conversationChannelId);
-      axios
-        .post(
-          `/conversations/${conversationChannelId}/messages/new`,
-          newMessage
-        )
-        .then((response) => {
-          console.log("Message sent successfully in mongo db", response.data);
-        })
-        .catch((error) => {
-          alert("Error sending message:", error);
-          console.error("Error sending message:", error);
-        });
-      axios
-        .post(`/chatstream/${conversationChannelId}/message/new`, newMessage)
-        .then((response) => {
-          console.log(
-            "Message sent successfully in chat stream:",
-            response.data
-          );
-          scrollToBottom();
-          setMessageInput("");
-          play();
-        })
-        .catch((error) => {
-          alert("Error sending message in chat stream:", error);
-          console.error("Error sending message in chat stream:", error);
-        });
-
-      axios
-        .put(
-          `/users/${user.uid}/conversations/${conversationChannelId}/update/lastMessage`,
-          newMessage
-        )
-        .then((response) => {
-          console.log(
-            "Message saved successfull in the last message field in user doc"
-          );
-        })
-        .catch((error) => {
-          console.error(
-            "Error Message not saved successfull in the last message field in user doc:",
-            error
-          );
-        });
-    }
-  };
+  useEffect(() => {
+    setMediaURL("");
+    setMedia({ file: null, type: "" });
+  }, [conversationChannelId]);
 
   const scrollToBottom = () => {
     chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -117,6 +70,145 @@ function Chat(props) {
       return `Last seen: ${daysDiff} day${daysDiff !== 1 ? "s" : ""} ago`;
     }
   };
+
+  const handleOpenDialog = () => {
+    console.log(media);
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+  };
+
+  const generateAndSetMediaURLs = async (e) => {
+    e.preventDefault();
+    try {
+      const storageRef = firebaseApp.storage().ref();
+
+      const fileRef =
+        media.type === "video"
+          ? storageRef.child(`media/${user.uid}/${user.uid}.mp4`)
+          : media.type === "image"
+          ? storageRef.child(`media/${user.uid}/${user.uid}.png`)
+          : storageRef.child(`media/${user.uid}/${user.uid}.${media.type}`);
+
+      await fileRef.put(media.file);
+      const downloadURL = await fileRef.getDownloadURL();
+      console.log(downloadURL);
+      setMedia({ file: null, type: "" });
+      setMediaURL(downloadURL);
+      return downloadURL; // Return the downloadURL
+    } catch (error) {
+      console.log("Error uploading media to Firebase Storage:", error);
+      throw error;
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    const fileType = selectedFile.type.split("/")[0]; // Get the file type (image or video)
+    setMedia({ file: selectedFile, type: fileType });
+  };
+  const sendMessage = async (e) => {
+    setIsSending(true);
+    e.preventDefault();
+    try {
+      const sendMessageToMongoDB = async (message) => {
+        try {
+          await axios.post(
+            `/conversations/${conversationChannelId}/messages/new`,
+            message
+          );
+          console.log("Message sent successfully in MongoDB");
+        } catch (error) {
+          console.error("Error sending message to MongoDB:", error);
+          throw error;
+        }
+      };
+
+      const sendMessageToChatStream = async (message) => {
+        try {
+          await axios.post(
+            `/chatstream/${conversationChannelId}/message/new`,
+            message
+          );
+          console.log("Message sent successfully in chat stream");
+          scrollToBottom();
+          setMessageInput("");
+          play();
+        } catch (error) {
+          console.error("Error sending message in chat stream:", error);
+          throw error;
+        }
+      };
+
+      const updateLastMessageField = async (message) => {
+        try {
+          await axios.put(
+            `/users/${user.uid}/conversations/${conversationChannelId}/update/lastMessage`,
+            message
+          );
+          console.log(
+            "Message saved successfully in the last message field in user doc"
+          );
+        } catch (error) {
+          console.error(
+            "Error saving message in the last message field in user doc:",
+            error
+          );
+          throw error;
+        }
+      };
+      if (messageInput !== "" || media.file !== null) {
+        if (media.file !== null) {
+          const downloadURL = await generateAndSetMediaURLs(e);
+          const message = {
+            conversationId: conversationChannelId,
+            content: messageInput ?? "",
+            senderId: user.uid,
+            receiverId: chattingWithUser.uid,
+            sentAt: new Date().toUTCString(),
+            seen: false,
+            received: false,
+            mediaURL: downloadURL ?? "",
+            isMediaAttached: downloadURL === "" ? false : true,
+            updatedAt: new Date().toUTCString(),
+          };
+          await Promise.all([
+            sendMessageToMongoDB(message),
+            sendMessageToChatStream(message),
+            updateLastMessageField(message),
+          ]);
+        } else {
+          const message = {
+            conversationId: conversationChannelId,
+            content: messageInput ?? "",
+            senderId: user.uid,
+            receiverId: chattingWithUser.uid,
+            sentAt: new Date().toUTCString(),
+            seen: false,
+            received: false,
+            mediaURL: mediaURL ?? "",
+            isMediaAttached: mediaURL === "" ? false : true,
+            updatedAt: new Date().toUTCString(),
+          };
+          await Promise.all([
+            sendMessageToMongoDB(message),
+            sendMessageToChatStream(message),
+            updateLastMessageField(message),
+          ]);
+        }
+      }
+
+      setIsSending(false);
+      setMediaURL("");
+      setMedia({ file: null, type: "" });
+    } catch (error) {
+      setIsSending(false);
+      console.error("Error sending message:", error);
+    }
+  };
+
   return (
     <div className="chat">
       <div className="chat__header">
@@ -139,12 +231,12 @@ function Chat(props) {
           </p>
         </div>
         <div className="chat__headerRight">
-          <IconButton>
+          {/* <IconButton>
             <SearchOutlined />
           </IconButton>
           <IconButton>
             <AttachFile />
-          </IconButton>
+          </IconButton> */}
           <IconButton>
             <MoreVert />
           </IconButton>
@@ -160,39 +252,81 @@ function Chat(props) {
             <div key={index} className="chat__messageContainer">
               <p className="chat__message chat__receiver">
                 <span className="chat__name">{message.name}</span>
+                {message.isMediaAttached ? (
+                  <p className="chat__message chat__receiver">
+                    <div className="chat__media-container">
+                      <a
+                        href={message.mediaURL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={
+                          message.mediaURL.endsWith(".mp4")
+                            ? "video.mp4"
+                            : "image.png"
+                        }
+                      >
+                        {message.mediaURL.endsWith(".mp4") ||
+                        message.mediaURL.includes(".mp4?") ? (
+                          <video className="chat__media" controls>
+                            <source src={message.mediaURL} type="video/mp4" />
+                            Your browser does not support the video tag.
+                          </video>
+                        ) : (
+                          <img
+                            src={message.mediaURL}
+                            alt="Attached Media"
+                            style={{ maxWidth: "300px", maxHeight: "250px" }}
+                          />
+                        )}
+                      </a>
+                    </div>
+                  </p>
+                ) : (
+                  <></>
+                )}
+
                 {message.content}
                 <span className="chat__timestamp">
                   {moment(message.sentAt).format("MMM DD, YYYY hh:mm A")}
                 </span>
-                {/* {message.sent ? (
-                  message.seen ? (
-                    <DoneAllIcon
-                      className="chat__tick"
-                      style={{ color: "blue", fontSize: "14px" }}
-                    />
-                  ) : message.received ? (
-                    <DoneAllIcon
-                      className="chat__tick"
-                      style={{ color: "grey", fontSize: "14px" }}
-                    />
-                  ) : (
-                    <DoneAllIcon
-                      className="chat__tick"
-                      style={{ color: "grey", fontSize: "14px" }}
-                    />
-                  )
-                ) : (
-                  <DoneIcon
-                    className="chat__tick"
-                    style={{ color: "grey", fontSize: "14px" }}
-                  />
-                )} */}
               </p>
             </div>
           ) : (
             <div key={index} className="chat__messageContainer">
               <p className="chat__message">
-                <span className="chat__name">{message.name}</span>
+                {message.isMediaAttached ? (
+                  <p className="chat__message  ">
+                    <div className="chat__media-container">
+                      <a
+                        href={message.mediaURL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={
+                          message.mediaURL.endsWith(".mp4")
+                            ? "video.mp4"
+                            : "image.png"
+                        }
+                      >
+                        {message.mediaURL.endsWith(".mp4") ||
+                        message.mediaURL.includes(".mp4?") ? (
+                          <video className="chat__media" controls>
+                            <source src={message.mediaURL} type="video/mp4" />
+                            Your browser does not support the video tag.
+                          </video>
+                        ) : (
+                          <img
+                            src={message.mediaURL}
+                            alt="Attached Media"
+                            style={{ maxWidth: "300px", maxHeight: "250px" }}
+                          />
+                        )}
+                      </a>
+                    </div>
+                  </p>
+                ) : (
+                  <></>
+                )}
+
                 {message.content}
                 <span className="chat__timestamp">
                   {" "}
@@ -219,21 +353,127 @@ function Chat(props) {
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
           />
-        </form>
+        </form>{" "}
+        {media.type === "" ? (
+          <div>
+            <IconButton onClick={handleOpenDialog}>
+              <Camera />
+            </IconButton>
+            <Dialog open={isDialogOpen} onClose={handleCloseDialog}>
+              <DialogTitle>Select Media</DialogTitle>
+              <input
+                type="file"
+                accept="image/*,video/*"
+                onChange={handleFileChange}
+              />
+              {media.file && (
+                <div className="preview-container">
+                  {media.type === "image" ? (
+                    <img
+                      style={{ padding: "20px" }}
+                      src={URL.createObjectURL(media.file)}
+                      alt="Selected Image"
+                      className="preview-image"
+                    />
+                  ) : (
+                    <video
+                      style={{ padding: "20px" }}
+                      src={URL.createObjectURL(media.file)}
+                      controls
+                      className="preview-video"
+                    />
+                  )}
+                  <p
+                    style={{
+                      color: "black",
+                      fontWeight: "600",
+                      padding: "20px",
+                    }}
+                  >
+                    File Name: {media.file.name}
+                  </p>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    className="upload-button" // Apply custom CSS class
+                    onClick={handleCloseDialog}
+                  >
+                    Save
+                  </Button>
+                </div>
+              )}
+            </Dialog>
+          </div>
+        ) : (
+          <>
+            <div>
+              <IconButton onClick={handleOpenDialog}>
+                <p style={{ fontSize: "18px", color: "grey" }}>File Attached</p>
+              </IconButton>
+              <Dialog open={isDialogOpen} onClose={handleCloseDialog}>
+                <DialogTitle>Select Media</DialogTitle>
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  onChange={handleFileChange}
+                />
+                {media.file && (
+                  <div className="preview-container">
+                    {media.type === "image" ? (
+                      <img
+                        style={{ padding: "20px" }}
+                        src={URL.createObjectURL(media.file)}
+                        alt="Selected Image"
+                        className="preview-image"
+                      />
+                    ) : (
+                      <video
+                        style={{ padding: "20px" }}
+                        src={URL.createObjectURL(media.file)}
+                        controls
+                        className="preview-video"
+                      />
+                    )}
+                    <p
+                      style={{
+                        color: "black",
+                        fontWeight: "600",
+                        padding: "20px",
+                      }}
+                    >
+                      File Name: {media.file.name}
+                    </p>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      className="upload-button" // Apply custom CSS class
+                      onClick={handleCloseDialog}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                )}
+              </Dialog>
+            </div>
+          </>
+        )}
         <Button
           variant="contained"
           color="primary"
           onClick={sendMessage}
+          disabled={isSending} // Disable the button while sending
           style={{
             marginLeft: 10,
+            marginRight: 10,
             backgroundColor: "#128C7E",
             color: "white",
             fontWeight: "bold",
           }}
         >
-          Send
+          {isSending ? "Sending..." : "Send"}{" "}
+          {/* Show "Sending..." or "Send" based on isSending */}
         </Button>
-        <MicIcon />
+        {/* <MicIcon /> */}
       </div>
     </div>
   );

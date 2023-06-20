@@ -28,6 +28,8 @@ class User {
         senderId: conversation.lastMessage.senderId,
         receiverId: conversation.lastMessage.receiverId,
         sentAt: new Date(conversation.lastMessage.sentAt),
+        mediaURL: conversation.lastMessage.mediaURL,
+        isMediaAttached: conversation.lastMessage.isMediaAttached,
         seen: conversation.lastMessage.seen,
         received: conversation.lastMessage.received,
         updatedAt: new Date(conversation.lastMessage.updatedAt),

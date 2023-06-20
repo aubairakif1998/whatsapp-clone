@@ -72,9 +72,9 @@ function Sidebar() {
       <div className="sidebar__header">
         <Avatar src={user.photoURL} style={{ width: "55px", height: "55px" }} />
         <div className="sidebar__headerRight">
-          <IconButton>
+          {/* <IconButton>
             <DonutLargeIcon />
-          </IconButton>
+          </IconButton> */}
           <IconButton>
             <ChatIcon />
           </IconButton>
@@ -133,14 +133,24 @@ function Sidebar() {
       <div className="sidebar__chats">
         {searchTerm === ""
           ? // Show chats of current users if search term is empty
-            currentUserChats.map((obj, index) => (
-              <div key={index}>
-                <SidebarChat
-                  userObj={obj.chatWithUser}
-                  lastMessage={obj.lastMessage}
-                />
-              </div>
-            ))
+            currentUserChats === null
+            ? filteredUsers.map((userObj) =>
+                user.uid === userObj.uid ? (
+                  <div key={userObj.uid}></div>
+                ) : (
+                  <div key={userObj.uid}>
+                    <SidebarChat userObj={userObj} />
+                  </div>
+                )
+              )
+            : currentUserChats.map((obj, index) => (
+                <div key={index}>
+                  <SidebarChat
+                    userObj={obj.chatWithUser}
+                    lastMessage={obj.lastMessage}
+                  />
+                </div>
+              ))
           : // Show filtered users if search term is not empty
             filteredUsers.map((userObj) =>
               user.uid === userObj.uid ? (

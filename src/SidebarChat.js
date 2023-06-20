@@ -1,6 +1,7 @@
 import React from "react";
 import "./SidebarChat.css";
 import { Avatar } from "@mui/material";
+
 import { useStateValue } from "./StateProvider";
 import axios from "./axios";
 import moment from "moment";
@@ -114,7 +115,9 @@ function SidebarChat(props) {
         {props.lastMessage && (
           <p className="sidebarChat__message">
             {props.lastMessage.senderId === user.uid ? "You: " : ""}
-            {props.lastMessage.content}
+            {props.lastMessage.isMediaAttached
+              ? " 📸 Media file sent"
+              : props.lastMessage.content}
           </p>
         )}
       </div>
