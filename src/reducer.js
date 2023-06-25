@@ -1,8 +1,6 @@
 export const initialState = {
   user: null,
-  conversationChannelId: null,
-  chattingWithUser: null,
-  listOfConversations: null,
+  selectedChannel: null,
 };
 
 const reducer = (state, action) => {
@@ -14,18 +12,18 @@ const reducer = (state, action) => {
     case "SET_CHANNEL":
       return {
         ...state,
-        conversationChannelId: action.conversationChannelId,
+        selectedChannel: action.selectedChannel,
       };
-    case "SET_CHATTINGWITH_USER":
-      return {
-        ...state,
-        chattingWithUser: action.chattingWithUser,
-      };
-    case "SET_CONVERSATION_CHANNEL_LIST_USER":
-      return {
-        ...state,
-        listOfConversations: action.listOfConversations,
-      };
+    // case "SET_CHATTINGWITH_USER":
+    //   return {
+    //     ...state,
+    //     chattingWithUser: action.chattingWithUser,
+    //   };
+    // case "SET_CONVERSATION_CHANNEL_LIST_USER":
+    //   return {
+    //     ...state,
+    //     listOfConversations: action.listOfConversations,
+    //   };
     default:
       return state;
   }

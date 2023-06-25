@@ -1,112 +1,101 @@
+import "./App.css";
 import Sidebar from "./Sidebar";
 import Chat from "./Chat";
 import ServerErrorPage from "./ServerErrorPage";
-import "./App.css";
-import { useEffect, useState } from "react";
 import Pusher from "pusher-js";
 import axios from "./axios";
 import LoginPage from "./LoginPage";
+import { useEffect, useState } from "react";
 import User from "./models/User";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { auth } from "./firebase";
 import { useStateValue } from "./StateProvider";
 import ProfileForm from "./ProfileForm";
+import { getUserInfo, resetUserStates } from "./controllers/userController";
+import socket from "./socket";
 function App() {
-  const [hasServerError, setHasServerError] = useState(false);
-  const [{ user, chattingWithUser, conversationChannelId }, dispatch] =
-    useStateValue();
+  const [hasServerError, setHasServerError] = useState({
+    state: false,
+    errorcode: 201,
+  });
+  const [{ user, selectedChannel }, dispatch] = useStateValue();
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState([]);
+  const [socketException, setSocketException] = useState(false);
+
   useEffect(() => {
-    if (conversationChannelId) {
+    if (selectedChannel) {
       axios
-        .get(`/conversations/${conversationChannelId}/messages`)
+        .get(
+          `/conversations/${selectedChannel.conversation.conversationId}/messages`
+        )
         .then((response) => {
           setMessages(response.data);
         })
         .catch((error) => {
           console.log(error);
-          setHasServerError(true);
+          setHasServerError({ state: true, errorcode: 500 });
         });
     }
-  }, [conversationChannelId]);
+  }, [selectedChannel]);
   useEffect(() => {
-    if (conversationChannelId) {
-      var pusher = new Pusher("9be80fad10efd4fded17", {
+    if (selectedChannel) {
+      var pusher = new Pusher("b623a3c3694d8f48b21c", {
         cluster: "ap2",
       });
-      var channel = pusher.subscribe(conversationChannelId);
+      var channel = pusher.subscribe(
+        selectedChannel.conversation.conversationId
+      );
       channel.bind("insert", function (data) {
         setMessages((prevMessages) => [...prevMessages, data]);
-        console.log(messages);
+        console.log("Data", messages);
       });
       return () => {
         channel.unbind_all();
         channel.unsubscribe();
       };
     }
-  }, [messages, conversationChannelId]);
+  }, [messages, selectedChannel]);
   useEffect(() => {
-    if (user) {
-      var pusher = new Pusher("9be80fad10efd4fded17", {
-        cluster: "ap2",
-      });
-      var channel = pusher.subscribe(user.uid);
-      channel.bind("insert", function (data) {
-        const updatedCurrentUser = new User(data);
-        dispatch({
-          type: "SET_USER",
-          user: updatedCurrentUser,
-        });
-        console.log("current user updated:", updatedCurrentUser);
-      });
-      return () => {
-        channel.unbind_all();
-        channel.unsubscribe();
-      };
-    }
-  }, [user]);
-  useEffect(() => {
-    const subscribeFirebaseAuth = auth.onAuthStateChanged((authUser) => {
-      console.log("Firebase Auth >>> FirebaseUser = ", authUser);
+    const handleAuthStateChanged = async (authUser) => {
+      console.log("Firebase Auth >>> FirebaseUser =", authUser);
       if (authUser !== null) {
-        try {
-          axios
-            .post(`/users/uid/${authUser.uid}`, authUser)
-            .then((response) => {
-              const user = new User(response.data);
-              dispatch({
-                type: "SET_USER",
-                user: user,
-              });
-              console.log("App - active user", user.conversations);
-              setLoading(false);
-            })
-            .catch((error) => {
-              console.error("Error creating/getting user in MongoDB:", error);
-              setLoading(false); // Update loading state even in case of an error
-              setHasServerError(true);
-            });
-        } catch (error) {
-          return alert(error);
-        }
-      } else {
+        const currentUser = await getUserInfo(
+          authUser,
+          dispatch,
+          setLoading,
+          setHasServerError
+        );
         dispatch({
           type: "SET_USER",
-          user: null,
+          user: currentUser,
         });
-        dispatch({
-          type: "SET_CHATTINGWITH_USER",
-          chattingWithUser: null,
-        });
-        setLoading(false);
+        socket.auth = { user: currentUser };
+        socket.connect();
+      } else {
+        await resetUserStates(dispatch, setLoading);
+        socket.off("connect_error");
+        socket.off();
+      }
+    };
+    const unsubscribe = auth.onAuthStateChanged(handleAuthStateChanged);
+    setSocketException(false);
+    socket.on("connect_error", (err) => {
+      if (err.message === "invalid user") {
+        setSocketException(true);
       }
     });
 
     return () => {
-      subscribeFirebaseAuth();
+      unsubscribe();
+      socket.off("connect_error");
+      socket.off();
     };
   }, [dispatch]);
+
+  useEffect(() => {
+    console.log("App updated current User", user);
+  }, [user]);
 
   if (loading) {
     return (
@@ -119,8 +108,8 @@ function App() {
       </div>
     );
   }
-  if (hasServerError) {
-    return <ServerErrorPage />;
+  if (hasServerError.state) {
+    return <ServerErrorPage errorcode={hasServerError.errorcode} />;
   }
 
   return (
@@ -130,20 +119,23 @@ function App() {
           <Route
             path="/"
             element={
-              user ? (
-                hasServerError ? (
-                  <ServerErrorPage />
+              socketException ? (
+                <>
+                  <h1>
+                    Socket Exception occured, Null user is passed to
+                    authenticate to server
+                  </h1>
+                </>
+              ) : user !== null ? (
+                hasServerError.state ? (
+                  <ServerErrorPage errorcode={hasServerError.errorcode} />
                 ) : user.profileSetupComplete ? (
                   <>
                     <div className="appheader"></div>
                     <div className="app">
                       <div className="app__body">
                         <Sidebar />
-                        {chattingWithUser && conversationChannelId ? (
-                          <Chat messages={messages} />
-                        ) : (
-                          <></>
-                        )}
+                        {selectedChannel ? <Chat messages={messages} /> : <></>}
                       </div>
                     </div>
                   </>

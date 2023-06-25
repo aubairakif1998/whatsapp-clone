@@ -8,74 +8,72 @@ import ChatIcon from "@mui/icons-material/Chat";
 import { Avatar, IconButton } from "@mui/material";
 import { SearchOutlined } from "@mui/icons-material";
 import SidebarChat from "./SidebarChat";
+import UsersList from "./UsersList";
 import { auth } from "./firebase";
-import User from "./models/User";
-
+import * as conversationController from "../src/controllers/conversationController.js";
 function Sidebar() {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [{ user }, dispatch] = useStateValue();
   const [currentUserChats, setcurrentUserChats] = useState([]);
-
+  const [isChatListVisible, setIsChatListVisible] = useState(false); // New state variable
   useEffect(() => {
-    axios
-      .get("/users/sync")
-      .then((response) => {
-        console.log(response.data);
-        setUsers(response.data);
-      })
-      .catch((error) => {
+    const fetchUsers = async () => {
+      try {
+        const res = await conversationController.getallAppUsers();
+        setUsers(res);
+      } catch (error) {
         console.log(error);
-      });
+      }
+    };
+    fetchUsers();
   }, []);
   useEffect(() => {
-    const list = [];
-
-    if (user.conversations) {
-      user.conversations.forEach((conversation) => {
-        const chatWithUser = users.find(
-          (user) => user.uid === conversation.chatWithUserId
+    const fetchCurrentUserConversations = async () => {
+      try {
+        const res = await conversationController.fetchCurrentUserConversations(
+          user
         );
-
-        if (chatWithUser) {
-          const chattile = {
-            chatWithUser: chatWithUser,
-            lastMessage: conversation.lastMessage,
-          };
-          list.push(chattile);
+        if (res.length > 0) {
+          const sortedChannels = res;
+          sortedChannels.sort((a, b) => {
+            const sentAtA = new Date(
+              a.conversation.messages[a.conversation.messages.length - 1].sentAt
+            ).getTime();
+            const sentAtB = new Date(
+              b.conversation.messages[b.conversation.messages.length - 1].sentAt
+            ).getTime();
+            return sentAtB - sentAtA; // Sort in descending order
+          });
+          setcurrentUserChats(sortedChannels);
         }
-      });
-
-      // Sort the list by the sentAt date of the last message
-      list.sort((a, b) => {
-        const sentAtA = new Date(a.lastMessage.sentAt);
-        const sentAtB = new Date(b.lastMessage.sentAt);
-        return sentAtB - sentAtA; // Sort in descending order
-      });
-    }
-
-    setcurrentUserChats(list);
-  }, [user, users]);
-
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    fetchCurrentUserConversations();
+  }, []);
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
   };
-
   const filteredUsers = users.filter(
-    (user) =>
-      user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      !currentUserChats.some((chat) => chat.chatWithUser.uid === user.uid)
+    (user) => user.firstName.toLowerCase().includes(searchTerm.toLowerCase())
+    // &&
+    // !currentUserChats.some((chat) => chat.chatWithUser.uid === user.uid)
   );
-
+  const toggleChatList = () => {
+    setIsChatListVisible(!isChatListVisible);
+    dispatch({
+      type: "SET_CHANNEL",
+      selectedChannel: null,
+    });
+  };
   return (
     <div className="sidebar">
       <div className="sidebar__header">
         <Avatar src={user.photoURL} style={{ width: "55px", height: "55px" }} />
         <div className="sidebar__headerRight">
-          {/* <IconButton>
-            <DonutLargeIcon />
-          </IconButton> */}
-          <IconButton>
+          <IconButton onClick={toggleChatList}>
             <ChatIcon />
           </IconButton>
           <IconButton>
@@ -94,13 +92,11 @@ function Sidebar() {
                         user: null,
                       });
                       dispatch({
-                        type: "SET_CHATTINGWITH_USER",
-                        chattingWithUser: null,
-                      });
-                      dispatch({
                         type: "SET_CHANNEL",
-                        conversationChannelId: null,
+                        selectedChannel: null,
                       });
+
+                      window.location.reload(false);
                       console.log(user, "logging out - reducer-active user");
                     })
                     .catch((error) => {
@@ -131,36 +127,71 @@ function Sidebar() {
         </div>
       </div>
       <div className="sidebar__chats">
-        {searchTerm === ""
-          ? // Show chats of current users if search term is empty
-            currentUserChats === null
-            ? filteredUsers.map((userObj) =>
+        {
+          isChatListVisible
+            ? users.map((userobj) =>
+                userobj.uid == user.uid ? (
+                  <div key={userobj.uid}></div>
+                ) : (
+                  <div key={userobj.uid}>
+                    <UsersList userObj={userobj} />
+                  </div>
+                )
+              )
+            : searchTerm === ""
+            ? currentUserChats.map((channel) => (
+                <div key={channel.conversation.conversationId}>
+                  <SidebarChat channel={channel} />
+                </div>
+              ))
+            : filteredUsers.map((userObj) =>
                 user.uid === userObj.uid ? (
                   <div key={userObj.uid}></div>
                 ) : (
                   <div key={userObj.uid}>
-                    <SidebarChat userObj={userObj} />
+                    <UsersList userObj={userObj} />
                   </div>
                 )
               )
-            : currentUserChats.map((obj, index) => (
-                <div key={index}>
-                  <SidebarChat
-                    userObj={obj.chatWithUser}
-                    lastMessage={obj.lastMessage}
-                  />
-                </div>
-              ))
-          : // Show filtered users if search term is not empty
-            filteredUsers.map((userObj) =>
-              user.uid === userObj.uid ? (
-                <div key={userObj.uid}></div>
-              ) : (
-                <div key={userObj.uid}>
-                  <SidebarChat userObj={userObj} />
-                </div>
-              )
-            )}
+          // isChatListVisible
+          // ? filteredUsers.map((userObj) =>
+          //     user.uid === userObj.uid ? (
+          //       <div key={userObj.uid}></div>
+          //     ) : (
+          //       <div key={userObj.uid}>
+          //         <SidebarChat userObj={userObj} />
+          //       </div>
+          //     )
+          //   )
+          //   : searchTerm === ""
+          //   ? currentUserChats === null
+          //     ? filteredUsers.map((userObj) =>
+          //         user.uid === userObj.uid ? (
+          //           <div key={userObj.uid}></div>
+          //         ) : (
+          //           <div key={userObj.uid}>
+          //             <SidebarChat userObj={userObj} />
+          //           </div>
+          //         )
+          //       )
+          //     : currentUserChats.map((obj, index) => (
+          //         <div key={index}>
+          //           <SidebarChat
+          //             userObj={obj.chatWithUser}
+          //             lastMessage={obj.lastMessage}
+          //           />
+          //         </div>
+          //       ))
+          //   : filteredUsers.map((userObj) =>
+          //       user.uid === userObj.uid ? (
+          //         <div key={userObj.uid}></div>
+          //       ) : (
+          //         <div key={userObj.uid}>
+          //           <SidebarChat userObj={userObj} />
+          //         </div>
+          //       )
+          //     )
+        }
       </div>
     </div>
   );

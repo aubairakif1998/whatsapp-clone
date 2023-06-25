@@ -1,31 +1,26 @@
 import React, { useState } from "react";
-
+import * as authController from "./controllers/authController.js";
 import "./LoginPage.css";
 import { useNavigate } from "react-router-dom";
-import { auth } from "./firebase";
 export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const signIn = (e) => {
+  const signIn = async (e) => {
     e.preventDefault();
-
-    auth
-      .signInWithEmailAndPassword(email, password)
-      .then((auth) => {
-        console.log(auth);
-        navigate("/");
-      })
-      .catch((error) => alert(error.message));
+    try {
+      await authController.signIn(email, password);
+    } catch (error) {
+      console.error(error);
+    }
   };
-  const register = (e) => {
+  const register = async (e) => {
     e.preventDefault();
-    auth
-      .createUserWithEmailAndPassword(email, password)
-      .then((auth) => {
-        navigate("/");
-      })
-      .catch((error) => alert(error.message));
+    try {
+      await authController.signup(email, password);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
@@ -121,52 +116,9 @@ export default function LoginPage() {
         <button title="Sign In" type="submit" className="sign-in_btn">
           <span>Sign In</span>
         </button>
-
         <button className="login__registerButton" onClick={register}>
           Create Account
         </button>
-        {/* <div className="separator">
-          <hr className="line" />
-          <span>Or</span>
-          <hr className="line" />
-        </div> */}
-        {/* <button title="Sign In" type="submit" className="sign-in_ggl">
-          <svg
-            height={18}
-            width={18}
-            viewBox="0 0 32 32"
-            xmlnsXlink="http://www.w3.org/1999/xlink"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <defs>
-              <path
-                d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"
-                id="A"
-              />
-            </defs>
-            <clipPath id="B"></clipPath>
-            <g transform="matrix(.727273 0 0 .727273 -.954545 -1.45455)">
-              <path fill="#fbbc05" clipPath="url(#B)" d="M0 37V11l17 13z" />
-              <path
-                fill="#ea4335"
-                clipPath="url(#B)"
-                d="M0 11l17 13 7-6.1L48 14V0H0z"
-              />
-              <path
-                fill="#34a853"
-                clipPath="url(#B)"
-                d="M0 37l30-23 7.9 1L48 0v48H0z"
-              />
-              <path
-                fill="#4285f4"
-                clipPath="url(#B)"
-                d="M48 48L17 24l-4-3 35-10z"
-              />
-            </g>
-          </svg>
-          <span>Sign In with Google</span>
-        </button> */}
-
         <p className="note">Terms of use &amp; Conditions</p>
       </form>
     </>

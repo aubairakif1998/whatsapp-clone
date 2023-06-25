@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import axios from "./axios";
+import { useNavigate } from "react-router-dom";
 import "./ProfileForm.css";
+import * as userController from "./controllers/userController.js";
 import { useStateValue } from "./StateProvider";
 import User from "./models/User";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
-import { firebaseApp } from "./firebase";
 const ProfileForm = (props) => {
+  const navigate = useNavigate();
   const [{ user }, dispatch] = useStateValue();
   const [firstName, setFirstName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -16,34 +17,23 @@ const ProfileForm = (props) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      setIsLoading(true);
-      const storageRef = firebaseApp.storage().ref();
-      const fileRef = storageRef.child(`images/octofez_${user.uid}.png`);
-      await fileRef.put(photoURL);
-      const downloadURL = await fileRef.getDownloadURL();
-      await axios
-        .put(`/users/update/${user.uid}`, {
-          phoneNumber: phoneNumber,
-          photoURL: downloadURL,
-          firstName: firstName,
-          lastName: "",
-          profileSetupComplete: true,
-        })
-        .then(async () => {
-          await axios
-            .post(`/userUpdate/${user.uid}/user/newupdate`, {})
-            .then((response) => {
-              console.log(response.data);
-              setIsLoading(false);
-            })
-            .catch((error) => {
-              console.log(error);
-            });
+      await userController
+        .completeUserProfile(
+          user,
+          photoURL,
+          setIsLoading,
+          phoneNumber,
+          firstName,
+          ""
+        )
+        .then((res) => {
+          window.location.reload(false);
         });
     } catch (error) {
-      console.log("Error updating user in MongoDB:", error);
+      console.log("Error updating ", error);
     } finally {
       setIsLoading(false);
+      navigate("/");
     }
   };
 

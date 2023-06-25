@@ -19,4 +19,19 @@ const db = firebaseApp.firestore();
 const auth = firebase.auth();
 const storage = firebase.storage();
 
+export const uploadPictureFirebase = async (photoURL, user, fileDirectory) => {
+  try {
+    const storageRef = firebaseApp.storage().ref();
+    const fileRef = storageRef.child(
+      `images/USER_ID_${user.uid}/${fileDirectory}/${fileDirectory}_${user.uid}_image.png`
+    );
+    await fileRef.put(photoURL);
+    const downloadURL = await fileRef.getDownloadURL();
+    return downloadURL;
+  } catch (error) {
+    console.alert(error);
+    return null;
+  }
+};
+
 export { db, auth, storage, firebaseApp };

@@ -17,23 +17,25 @@ import DoneAllIcon from "@mui/icons-material/DoneAll";
 import { useStateValue } from "./StateProvider";
 import sound from "./assets/sent.wav";
 import moment from "moment";
+import * as channelController from "./controllers/channelController.js";
+
 function Chat(props) {
   const [messageInput, setMessageInput] = useState("");
   const [mediaURL, setMediaURL] = useState("");
   const chatContainerRef = useRef(null);
   const [showScrollDownButton, setShowScrollDownButton] = useState(false);
-  const [{ user, conversationChannelId, chattingWithUser }, dispatch] =
-    useStateValue();
+  const [{ user, selectedChannel }, dispatch] = useStateValue();
   const [media, setMedia] = useState({ file: null, type: "" });
   const [isSending, setIsSending] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   function play() {
     new Audio(sound).play();
   }
   useEffect(() => {
     setMediaURL("");
     setMedia({ file: null, type: "" });
-  }, [conversationChannelId]);
+  }, [selectedChannel.conversation.conversationId]);
 
   const scrollToBottom = () => {
     chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -84,14 +86,12 @@ function Chat(props) {
     e.preventDefault();
     try {
       const storageRef = firebaseApp.storage().ref();
-
       const fileRef =
         media.type === "video"
           ? storageRef.child(`media/${user.uid}/${user.uid}.mp4`)
           : media.type === "image"
           ? storageRef.child(`media/${user.uid}/${user.uid}.png`)
           : storageRef.child(`media/${user.uid}/${user.uid}.${media.type}`);
-
       await fileRef.put(media.file);
       const downloadURL = await fileRef.getDownloadURL();
       console.log(downloadURL);
@@ -113,60 +113,14 @@ function Chat(props) {
     setIsSending(true);
     e.preventDefault();
     try {
-      const sendMessageToMongoDB = async (message) => {
-        try {
-          await axios.post(
-            `/conversations/${conversationChannelId}/messages/new`,
-            message
-          );
-          console.log("Message sent successfully in MongoDB");
-        } catch (error) {
-          console.error("Error sending message to MongoDB:", error);
-          throw error;
-        }
-      };
-
-      const sendMessageToChatStream = async (message) => {
-        try {
-          await axios.post(
-            `/chatstream/${conversationChannelId}/message/new`,
-            message
-          );
-          console.log("Message sent successfully in chat stream");
-          scrollToBottom();
-          setMessageInput("");
-          play();
-        } catch (error) {
-          console.error("Error sending message in chat stream:", error);
-          throw error;
-        }
-      };
-
-      const updateLastMessageField = async (message) => {
-        try {
-          await axios.put(
-            `/users/${user.uid}/conversations/${conversationChannelId}/update/lastMessage`,
-            message
-          );
-          console.log(
-            "Message saved successfully in the last message field in user doc"
-          );
-        } catch (error) {
-          console.error(
-            "Error saving message in the last message field in user doc:",
-            error
-          );
-          throw error;
-        }
-      };
       if (messageInput !== "" || media.file !== null) {
         if (media.file !== null) {
           const downloadURL = await generateAndSetMediaURLs(e);
           const message = {
-            conversationId: conversationChannelId,
+            conversationId: selectedChannel.conversation.conversationId,
             content: messageInput ?? "",
             senderId: user.uid,
-            receiverId: chattingWithUser.uid,
+            receiverId: selectedChannel.users[0].uid,
             sentAt: new Date().toUTCString(),
             seen: false,
             received: false,
@@ -175,16 +129,17 @@ function Chat(props) {
             updatedAt: new Date().toUTCString(),
           };
           await Promise.all([
-            sendMessageToMongoDB(message),
-            sendMessageToChatStream(message),
-            updateLastMessageField(message),
+            channelController.sendMessageToMongoDB(selectedChannel, message),
+            channelController.sendMessageToChatStream(selectedChannel, message),
           ]);
+          play();
+          setMessageInput("");
         } else {
           const message = {
-            conversationId: conversationChannelId,
+            conversationId: selectedChannel.conversation.conversationId,
             content: messageInput ?? "",
             senderId: user.uid,
-            receiverId: chattingWithUser.uid,
+            receiverId: selectedChannel.users[0].uid,
             sentAt: new Date().toUTCString(),
             seen: false,
             received: false,
@@ -193,13 +148,13 @@ function Chat(props) {
             updatedAt: new Date().toUTCString(),
           };
           await Promise.all([
-            sendMessageToMongoDB(message),
-            sendMessageToChatStream(message),
-            updateLastMessageField(message),
+            channelController.sendMessageToMongoDB(selectedChannel, message),
+            channelController.sendMessageToChatStream(selectedChannel, message),
           ]);
+          play();
+          setMessageInput("");
         }
       }
-
       setIsSending(false);
       setMediaURL("");
       setMedia({ file: null, type: "" });
@@ -213,7 +168,7 @@ function Chat(props) {
     <div className="chat">
       <div className="chat__header">
         <Avatar
-          src={chattingWithUser.photoURL}
+          src={selectedChannel.users[0].photoURL}
           style={{ width: "55px", height: "55px" }}
         />
         <div className="chat__headerInfo" style={{ marginLeft: "15px" }}>
@@ -224,10 +179,10 @@ function Chat(props) {
               fontWeight: "bold",
             }}
           >
-            {chattingWithUser.firstName}
+            {selectedChannel.users[0].firstName}
           </h3>
           <p style={{ fontSize: "14px", color: "#999999" }}>
-            {formatLastSeen(chattingWithUser.lastSeen)}
+            {formatLastSeen(selectedChannel.users[0].lastSeen)}
           </p>
         </div>
         <div className="chat__headerRight">
@@ -250,8 +205,15 @@ function Chat(props) {
         {props.messages.map((message, index) =>
           message.senderId === user.uid ? (
             <div key={index} className="chat__messageContainer">
-              <p className="chat__message chat__receiver">
-                <span className="chat__name">{message.name}</span>
+              <p
+                className={
+                  message.content ===
+                  "Welcome to the app, Enjoy our chatting feature. Thank you!"
+                    ? "chat__message centered"
+                    : "chat__message chat__receiver"
+                }
+              >
+                {/* <span className="chat__name">{message.name}</span> */}
                 {message.isMediaAttached ? (
                   <p className="chat__message chat__receiver">
                     <div className="chat__media-container">
@@ -286,14 +248,25 @@ function Chat(props) {
                 )}
 
                 {message.content}
+
                 <span className="chat__timestamp">
-                  {moment(message.sentAt).format("MMM DD, YYYY hh:mm A")}
+                  {message.content ===
+                  "Welcome to the app, Enjoy our chatting feature. Thank you!"
+                    ? ""
+                    : moment(message.sentAt).format("MMM DD, YYYY hh:mm A")}
                 </span>
               </p>
             </div>
           ) : (
             <div key={index} className="chat__messageContainer">
-              <p className="chat__message">
+              <p
+                className={
+                  message.content ===
+                  "Welcome to the app, Enjoy our chatting feature. Thank you!"
+                    ? "chat__message centered"
+                    : "chat__message "
+                }
+              >
                 {message.isMediaAttached ? (
                   <p className="chat__message  ">
                     <div className="chat__media-container">
@@ -329,8 +302,10 @@ function Chat(props) {
 
                 {message.content}
                 <span className="chat__timestamp">
-                  {" "}
-                  {moment(message.sentAt).format("MMM DD, YYYY hh:mm A")}
+                  {message.content ===
+                  "Welcome to the app, Enjoy our chatting feature. Thank you!"
+                    ? ""
+                    : moment(message.sentAt).format("MMM DD, YYYY hh:mm A")}
                 </span>
               </p>
             </div>
