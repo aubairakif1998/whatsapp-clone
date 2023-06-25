@@ -29,13 +29,13 @@ function SidebarChat(props) {
         }}
         className={`sidebarChat__avatar`}
       />
-      <div
+      {/* <div
         className={`sidebarChat__avatar ${
           props.channel.users[0].isOnline
             ? "sidebarChat__avatar--online"
             : "sidebarChat__avatar--offline"
         }`}
-      ></div>
+      ></div> */}
 
       <div className="sidebarChat__details">
         <div className="sidebarChat__info">
