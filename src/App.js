@@ -73,7 +73,6 @@ function App() {
       }
     };
     const unsubscribe = auth.onAuthStateChanged(handleAuthStateChanged);
-    setSocketException(false);
 
     return () => {
       unsubscribe();
