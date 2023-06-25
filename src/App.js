@@ -12,7 +12,6 @@ import { auth } from "./firebase";
 import { useStateValue } from "./StateProvider";
 import ProfileForm from "./ProfileForm";
 import { getUserInfo, resetUserStates } from "./controllers/userController";
-import socket from "./socket";
 function App() {
   const [hasServerError, setHasServerError] = useState({
     state: false,
@@ -21,7 +20,6 @@ function App() {
   const [{ user, selectedChannel }, dispatch] = useStateValue();
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState([]);
-  const [socketException, setSocketException] = useState(false);
 
   useEffect(() => {
     if (selectedChannel) {
@@ -70,26 +68,15 @@ function App() {
           type: "SET_USER",
           user: currentUser,
         });
-        socket.auth = { user: currentUser };
-        socket.connect();
       } else {
         await resetUserStates(dispatch, setLoading);
-        socket.off("connect_error");
-        socket.off();
       }
     };
     const unsubscribe = auth.onAuthStateChanged(handleAuthStateChanged);
     setSocketException(false);
-    socket.on("connect_error", (err) => {
-      if (err.message === "invalid user") {
-        setSocketException(true);
-      }
-    });
 
     return () => {
       unsubscribe();
-      socket.off("connect_error");
-      socket.off();
     };
   }, [dispatch]);
 
@@ -119,14 +106,7 @@ function App() {
           <Route
             path="/"
             element={
-              socketException ? (
-                <>
-                  <h1>
-                    Socket Exception occured, Null user is passed to
-                    authenticate to server
-                  </h1>
-                </>
-              ) : user !== null ? (
+              user !== null ? (
                 hasServerError.state ? (
                   <ServerErrorPage errorcode={hasServerError.errorcode} />
                 ) : user.profileSetupComplete ? (
