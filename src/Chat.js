@@ -86,12 +86,14 @@ function Chat(props) {
     e.preventDefault();
     try {
       const storageRef = firebaseApp.storage().ref();
-      const fileRef =
+      const randomNumber = Math.floor(Math.random() * 1000000); // Generate a random number
+      const fileName =
         media.type === "video"
-          ? storageRef.child(`media/${user.uid}/${user.uid}.mp4`)
+          ? `${user.uid}-${randomNumber}.mp4`
           : media.type === "image"
-          ? storageRef.child(`media/${user.uid}/${user.uid}.png`)
-          : storageRef.child(`media/${user.uid}/${user.uid}.${media.type}`);
+          ? `${user.uid}-${randomNumber}.png`
+          : `${user.uid}-${randomNumber}.${media.type}`;
+      const fileRef = storageRef.child(`media/${user.uid}/${fileName}`);
       await fileRef.put(media.file);
       const downloadURL = await fileRef.getDownloadURL();
       console.log(downloadURL);
